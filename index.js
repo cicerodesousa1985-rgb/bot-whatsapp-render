@@ -1,44 +1,38 @@
-const fs = require("fs");
-if (!fs.existsSync("./sessions")) fs.mkdirSync("./sessions");
-
 const express = require("express");
-const { default: makeWASocket, useMultiFileAuthState } = require("@whiskeysockets/baileys");
-const QRCode = require("qrcode");
+const bodyParser = require("body-parser");
+const { sendMessage } = require("./cloudzapi");
+require("dotenv").config();
 
 const app = express();
-let sock;
-let qrAtual = "";
+app.use(bodyParser.json());
 
-async function start() {
-const { state, saveCreds } = await useMultiFileAuthState("sessions");
+app.post("/webhook", async (req, res) => {
+  const msg = req.body;
 
-sock = makeWASocket({
-auth: state,
-printQRInTerminal: false
+  if (!msg.message || !msg.phone) return res.sendStatus(200);
+
+  const texto = msg.message.toLowerCase();
+  const numero = msg.phone;
+
+  if (texto.includes("oi") || texto.includes("olá")) {
+    await sendMessage(numero, "Olá 👋 Sou o atendimento automático. Digite:\n1️⃣ Produtos\n2️⃣ Suporte\n3️⃣ Falar com humano");
+  }
+
+  if (texto === "1") {
+    await sendMessage(numero, "🛒 Aqui estão nossos produtos...");
+  }
+
+  if (texto === "2") {
+    await sendMessage(numero, "🛠 Nosso suporte irá te ajudar.");
+  }
+
+  if (texto === "3") {
+    await sendMessage(numero, "👨‍💼 Um atendente humano falará com você.");
+  }
+
+  res.sendStatus(200);
 });
 
-sock.ev.on("creds.update", saveCreds);
-
-sock.ev.on("connection.update", async ({ qr, connection }) => {
-if (qr) {
-qrAtual = await QRCode.toDataURL(qr);
-console.log("QR GERADO");
-}
-if (connection === "open") console.log("BOT CONECTADO");
-});
-}
-
-start();
-
-app.get("/", async (req, res) => {
-res.send(`
-<body style="background:#0f172a; color:white; text-align:center; font-family:Arial">
-<h2>📲 Escaneie o QR</h2>
-${qrAtual ? `<img src="${qrAtual}" width="300"/>` : "<p>Gerando QR... aguarde 5s</p>"}
-<meta http-equiv="refresh" content="5">
-</body>
-`);
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Servidor rodando"));
+app.listen(process.env.PORT, () =>
+  console.log("Bot rodando com CloudZapi 🚀")
+);
