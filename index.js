@@ -2,55 +2,43 @@ const fs = require("fs");
 if (!fs.existsSync("./sessions")) fs.mkdirSync("./sessions");
 
 const express = require("express");
-const http = require("http");
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require("@whiskeysockets/baileys");
+const { default: makeWASocket, useMultiFileAuthState } = require("@whiskeysockets/baileys");
 const QRCode = require("qrcode");
 
 const app = express();
-const server = http.createServer(app);
-
 let sock;
-let qrBase64 = null;
+let qrAtual = "";
 
-async function iniciarBot() {
+async function start() {
 const { state, saveCreds } = await useMultiFileAuthState("sessions");
 
 sock = makeWASocket({
 auth: state,
-printQRInTerminal: true
+printQRInTerminal: false
 });
 
 sock.ev.on("creds.update", saveCreds);
 
-sock.ev.on("connection.update", async ({ qr, connection, lastDisconnect }) => {
-
+sock.ev.on("connection.update", async ({ qr, connection }) => {
 if (qr) {
-qrBase64 = await QRCode.toDataURL(qr);
-console.log("QR ATUALIZADO");
+qrAtual = await QRCode.toDataURL(qr);
+console.log("QR GERADO");
 }
-
-if (connection === "close") {
-const shouldReconnect =
-lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-
-if (shouldReconnect) iniciarBot();
-}
-
-if (connection === "open") {
-console.log("WHATSAPP CONECTADO COM SUCESSO");
-}
+if (connection === "open") console.log("BOT CONECTADO");
 });
 }
 
-iniciarBot();
+start();
 
-app.get("/", (req, res) => {
+app.get("/", async (req, res) => {
 res.send(`
-<h2>BOT WHATSAPP</h2>
-${qrBase64 ? `<img src="${qrBase64}" width="300"/>` : "<p>Gerando QR... aguarde e atualize</p>"}
+<body style="background:#0f172a; color:white; text-align:center; font-family:Arial">
+<h2>📲 Escaneie o QR</h2>
+${qrAtual ? `<img src="${qrAtual}" width="300"/>` : "<p>Gerando QR... aguarde 5s</p>"}
 <meta http-equiv="refresh" content="5">
+</body>
 `);
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log("Servidor ativo"));
+app.listen(PORT, () => console.log("Servidor rodando"));
