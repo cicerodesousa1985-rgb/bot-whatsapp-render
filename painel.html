@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Bot WhatsApp</title>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+<h2>BOT ONLINE</h2>
+<button onclick="fetch('/toggle',{method:'POST'})">Ligar/Desligar</button>
+
+<h3>QR</h3>
+<img id="qr" width="250"/>
+
+<h3>Enviar</h3>
+<input id="n" placeholder="Número"/>
+<input id="m" placeholder="Mensagem"/>
+<button onclick="enviar()">Enviar</button>
+
+<ul id="l"></ul>
+
+<script>
+const socket = io();
+socket.on("qr", img => document.getElementById("qr").src = img);
+socket.on("nova_msg", d=>{
+let li=document.createElement("li");
+li.innerText=d.numero+" → "+d.texto;
+l.prepend(li);
+});
+async function enviar(){
+await fetch("/send",{method:"POST",headers:{'Content-Type':'application/json'},
+body:JSON.stringify({numero:n.value,mensagem:m.value})});
+alert("ok");
+}
+</script>
+</body>
+</html>
